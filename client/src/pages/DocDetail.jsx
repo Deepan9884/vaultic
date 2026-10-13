@@ -52,7 +52,34 @@ export default function DocDetail() {
     }
   };
 
-  const toggleBookmark = async () => {    setMsg('');
+  const [replacing, setReplacing] = useState(false);
+
+  const canManage = user && doc && (
+    user.role === 'admin' ||
+    String(doc.uploadedBy?._id || doc.uploadedBy) === String(user.id) ||
+    (user.role === 'manager' && doc.team === user.team)
+  );
+
+  const replaceFile = async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setMsg('');
+    setReplacing(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', f);
+      const { data } = await api.patch(`/documents/${id}/file`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setDoc(data?.data || data);
+      setMsg(`Updated to version ${(data?.data || data)?.version}. Previous file archived.`);
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'File replacement failed.');
+    } finally {
+      setReplacing(false);
+    }
+  };
+  const toggleBookmark = async () => {
+    setMsg('');
     try {
       if (bookmarked) {
         await api.delete(`/bookmarks/${id}`);
@@ -79,9 +106,14 @@ export default function DocDetail() {
   if (loading) return <Spinner label="Opening…" />;
   if (!doc) return <p className="card p-8 text-center text-sm text-slate-500">This document doesn't exist or isn't shared with you. <Link className="font-semibold text-brand-700 hover:underline" to="/browse">Back to the library</Link></p>;
 
+  const fmtSize = (b) => {
+    if (!(b > 0)) return null;
+    if (b < 1024) return `${b} B`;
+    return `${(b / 1024).toFixed(0)} KB`;
+  };
   const meta = [
     doc.category, doc.team, doc.visibility,
-    doc.fileSize > 0 ? `${(doc.fileSize / 1024).toFixed(0)} KB` : null,
+    fmtSize(doc.fileSize),
   ].filter(Boolean);
 
   return (
@@ -108,6 +140,12 @@ export default function DocDetail() {
           <button onClick={toggleBookmark} className={bookmarked ? 'btn-secondary' : 'btn-primary'}>
             {bookmarked ? 'Saved ✓' : 'Save for later'}
           </button>
+          {canManage && (
+            <label className={`btn-secondary cursor-pointer ${replacing ? 'opacity-50' : ''}`}>
+              {replacing ? 'Replacing…' : 'Replace file'}
+              <input type="file" accept=".pdf,.docx,.txt,.md" className="hidden" disabled={replacing} onChange={replaceFile} />
+            </label>
+          )}
           {user?.role === 'admin' && doc.status === 'pending' && (
             <>
               <button onClick={() => moderate('approve')} className="rounded-lg bg-emerald-700 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-600">Approve</button>
@@ -118,6 +156,24 @@ export default function DocDetail() {
 
         {(doc.tags || []).length > 0 && (
           <p className="text-[13px] text-slate-400">{doc.tags.map((t) => `#${t}`).join('  ')}</p>
+        )}
+
+        {(doc.versions || []).length > 0 && (
+          <div className="card p-4">
+            <h2 className="text-sm font-bold text-ink-950">Version history</h2>
+            <ul className="mt-2 space-y-1.5 text-[13px] text-slate-500">
+              <li className="flex justify-between gap-2">
+                <span className="font-semibold text-ink-950">v{doc.version} — current</span>
+                <span>{doc.updatedAt ? new Date(doc.updatedAt).toLocaleDateString() : ''}</span>
+              </li>
+              {[...(doc.versions || [])].reverse().map((v) => (
+                <li key={v.version} className="flex justify-between gap-2">
+                  <span>v{v.version}{v.fileType ? ` · ${String(v.fileType).split('/').pop()}` : ''}{v.fileSize ? ` · ${(v.fileSize / 1024).toFixed(0)} KB` : ''}</span>
+                  <span>{v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : ''}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>

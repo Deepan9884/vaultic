@@ -145,6 +145,19 @@ const login = async (email, pw = 'password123') => req('POST', '/auth/login', nu
   check('faq list (employee)', (r.data?.data || []).some((f) => String(f._id) === String(faqId)));
   r = await req('PATCH', `/faqs/${faqId}`, tM, { answer: 'Updated answer.' });
   check('faq manager update', r.status === 200);
+  const delFaq = await req('POST', '/faqs', tM, { question: `QA temp ${SFX}?`, answer: 'temp', visibility: 'private' });
+  r = await req('DELETE', `/faqs/${delFaq.data?.data?._id}`, tM);
+  check('faq manager delete', r.status === 200);
+
+  console.log('== file versions ==');
+  const fdv = new FormData();
+  fdv.append('file', new Blob(['v2 content ' + SFX], { type: 'text/plain' }), 'policy-v2.txt');
+  r = await req('PATCH', `/documents/${docId}/file`, tM, fdv);
+  check('owner replace file -> v2', r.status === 200 && r.data?.data?.version === 2 && (r.data?.data?.versions || []).length === 1);
+  r = await req('GET', `/documents/${docId}/file`, tE);
+  check('download serves v2 bytes', r.status === 200 && String(r.data).includes('v2 content'));
+  r = await req('PATCH', `/documents/${docId}/file`, tE, fdv);
+  check('non-owner replace -> 403', r.status === 403);
 
   console.log('== users + analytics (admin) ==');
   r = await req('GET', '/users', tA);

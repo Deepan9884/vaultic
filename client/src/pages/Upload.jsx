@@ -12,6 +12,7 @@ export default function Upload() {
   const [file, setFile] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -25,11 +26,17 @@ export default function Upload() {
       return;
     }
     setBusy(true);
+    setProgress(0);
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
       if (file) fd.append('file', file);
-      const { data } = await api.post('/documents', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const { data } = await api.post('/documents', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (ev) => {
+          if (ev.total) setProgress(Math.round((ev.loaded / ev.total) * 100));
+        },
+      });
       const doc = data?.data || data?.doc || data;
       const nid = doc?._id || doc?.id;
       navigate(nid ? `/docs/${nid}` : '/browse');
@@ -85,8 +92,13 @@ export default function Upload() {
             <FileDropzone onFile={setFile} />
           </div>
           <button disabled={busy} className="btn-primary w-full">
-            {busy ? 'Publishing & indexing…' : 'Publish document'}
+            {busy ? `Publishing… ${progress}%` : 'Publish document'}
           </button>
+          {busy && progress > 0 && (
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          )}
         </form>
       </div>
     </div>

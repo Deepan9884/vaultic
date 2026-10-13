@@ -31,6 +31,7 @@ router.post('/', upload.single('file'), c.create);
 router.get('/:id', c.getById);
 router.get('/:id/file', c.download);
 router.patch('/:id', c.update);
+router.patch('/:id/file', upload.single('file'), c.replaceFile);
 router.delete('/:id', c.softDelete);
 router.post('/:id/approve', authorize('admin'), c.approve);
 router.post('/:id/reject', authorize('admin'), c.reject);

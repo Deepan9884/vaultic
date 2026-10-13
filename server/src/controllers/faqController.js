@@ -51,7 +51,8 @@ async function update(req, res, next) {
     const faq = await Faq.findById(req.params.id);
     if (!faq) return res.status(404).json({ success: false, message: 'Not found' });
     const owner = String(faq.uploadedBy) === String(req.user.id);
-    if (req.user.role !== 'admin' && !owner) return res.status(403).json({ success: false, message: 'Forbidden' });
+    const sameTeamManager = req.user.role === 'manager' && faq.team === req.user.team;
+    if (req.user.role !== 'admin' && !owner && !sameTeamManager) return res.status(403).json({ success: false, message: 'Forbidden' });
     const { question, answer, tags, team, visibility, status } = req.body || {};
     if (question) faq.question = String(question).trim();
     if (answer) faq.answer = String(answer);
@@ -70,7 +71,8 @@ async function remove(req, res, next) {
     const faq = await Faq.findById(req.params.id);
     if (!faq) return res.status(404).json({ success: false, message: 'Not found' });
     const owner = String(faq.uploadedBy) === String(req.user.id);
-    if (req.user.role !== 'admin' && !owner) return res.status(403).json({ success: false, message: 'Forbidden' });
+    const sameTeamManager = req.user.role === 'manager' && faq.team === req.user.team;
+    if (req.user.role !== 'admin' && !owner && !sameTeamManager) return res.status(403).json({ success: false, message: 'Forbidden' });
     await faq.deleteOne();
     return res.json({ success: true, message: 'Deleted' });
   } catch (e) { return next(e); }

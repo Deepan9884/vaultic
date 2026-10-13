@@ -16,3 +16,14 @@ Upload → extract (pdf-parse/mammoth) → chunk (~600 chars/100 overlap) → em
 
 ## RBAC
 `buildDocFilter` + `canAccessDoc` enforce server-side: admin=all, team=public+own team, private=owner/allowedUsers only. Status must be `approved`.
+
+## Production deploy
+1. Copy env: `cp server/.env.example server/.env` and set `MONGO_URI` (Atlas), a strong `JWT_SECRET`, and `CLIENT_URL` (your frontend origin). Never commit `.env`.
+2. Easiest path — Docker Compose (API + Mongo with persistent volumes):
+   ```sh
+   JWT_SECRET=<long-random> CLIENT_URL=https://app.example.com docker compose up -d --build
+   ```
+3. Frontend: `cd client && VITE_API_URL=https://api.example.com/api npm run build`, then host `dist/` on Vercel/Netlify/Render static (set `VITE_API_URL` in their dashboard instead of baking it in).
+4. Put TLS in front (Cloudflare, ALB, or Caddy/Nginx reverse proxy). The API sets `trust proxy` so rate limits see real client IPs.
+5. Back up MongoDB on a schedule (`mongodump` or Atlas backups) and snapshot the `uploads` volume — files live on disk, not in the DB.
+6. Verify: `GET /api/health` (checks DB + uptime), then `cd server && npm run smoke` for the full 50+ check suite.

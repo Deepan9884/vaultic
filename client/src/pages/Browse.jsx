@@ -8,6 +8,7 @@ const CATEGORIES = ['', 'Project', 'API', 'SOP', 'Manual', 'FAQ'];
 export default function Browse() {
   const [docs, setDocs] = useState([]);
   const [filters, setFilters] = useState({ category: '', team: '', q: '' });
+  const [sort, setSort] = useState('newest');
   const [loading, setLoading] = useState(false);
 
   const fetchDocs = async (override) => {
@@ -62,14 +63,31 @@ export default function Browse() {
       </div>
 
       {!loading && docs.length > 0 && (
-        <p className="mb-3 text-[13px] text-slate-500">
-          {docs.length} document{docs.length === 1 ? '' : 's'}
-          {(filters.category || filters.team || filters.q) ? ' match your filters' : ' in your library'}
-        </p>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-[13px] text-slate-500">
+            {docs.length} document{docs.length === 1 ? '' : 's'}
+            {(filters.category || filters.team || filters.q) ? ' match your filters' : ' in your library'}
+          </p>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            aria-label="Sort documents"
+            className="rounded-lg border border-[#e3e0f0] bg-white px-2.5 py-1.5 text-[13px] font-medium text-slate-600 focus:outline-none"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="title">Title A–Z</option>
+          </select>
+        </div>
       )}
       {loading ? <Spinner /> : docs.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {docs.map((d) => <DocCard key={d._id || d.id} doc={d} />)}
+          {[...docs].sort((a, b) => {
+            if (sort === 'title') return String(a.title).localeCompare(String(b.title));
+            const ta = new Date(a.createdAt || 0).getTime();
+            const tb = new Date(b.createdAt || 0).getTime();
+            return sort === 'oldest' ? ta - tb : tb - ta;
+          }).map((d) => <DocCard key={d._id || d.id} doc={d} />)}
         </div>
       ) : (
         <EmptyState title="No documents found" sub="Try widening the filters — or upload the missing doc and it will appear here after approval." />

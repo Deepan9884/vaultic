@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import CommandPalette from './components/CommandPalette.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import RoleGuard from './components/RoleGuard.jsx';
 import Login from './pages/Login.jsx';
@@ -17,6 +18,7 @@ import Bookmarks from './pages/Bookmarks.jsx';
 import AdminUsers from './pages/admin/AdminUsers.jsx';
 import AdminApprovals from './pages/admin/AdminApprovals.jsx';
 import AdminAnalytics from './pages/admin/AdminAnalytics.jsx';
+import NotFound from './pages/NotFound.jsx';
 
 function Shell({ children }) {
   const [palette, setPalette] = useState(false);
@@ -67,11 +69,11 @@ function AppRoutes() {
       <Route path="/admin/users" element={<ProtectedRoute><RoleGuard roles={['admin']}><AdminUsers /></RoleGuard></ProtectedRoute>} />
       <Route path="/admin/approvals" element={<ProtectedRoute><RoleGuard roles={['admin']}><AdminApprovals /></RoleGuard></ProtectedRoute>} />
       <Route path="/admin/analytics" element={<ProtectedRoute><RoleGuard roles={['admin']}><AdminAnalytics /></RoleGuard></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
-  if (bare) return routes;
-  return <Shell>{routes}</Shell>;
+  if (bare) return <ErrorBoundary>{routes}</ErrorBoundary>;
+  return <Shell><ErrorBoundary>{routes}</ErrorBoundary></Shell>;
 }
 
 export default function App() {

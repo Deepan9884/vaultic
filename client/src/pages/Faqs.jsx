@@ -29,6 +29,17 @@ export default function Faqs() {
     }
   };
 
+  const removeFaq = async (id) => {
+    if (!window.confirm('Delete this FAQ?')) return;
+    setErr('');
+    try {
+      await api.delete(`/faqs/${id}`);
+      load();
+    } catch (ex) {
+      setErr(ex.response?.data?.message || 'Could not delete FAQ');
+    }
+  };
+
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader title="FAQs" sub="Short answers to questions that come up often." />
@@ -61,7 +72,17 @@ export default function Faqs() {
               {isOpen && (
                 <div className="border-t border-[#e3e0f0] px-4 py-3.5">
                   <p className="text-sm leading-relaxed text-slate-600">{f.answer}</p>
-                  {(f.team || f.visibility) && <p className="mt-2 text-xs text-slate-400">{[f.team, f.visibility].filter(Boolean).join(' · ')}</p>}
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <p className="text-xs text-slate-400">{[f.team, f.visibility].filter(Boolean).join(' · ')}</p>
+                    {canEdit && (
+                      <button
+                        onClick={() => removeFaq(id)}
+                        className="rounded-md px-2 py-1 text-xs font-medium text-slate-400 hover:bg-red-50 hover:text-red-700"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

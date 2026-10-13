@@ -239,4 +239,36 @@ async function markReviewed(req, res, next) {
   } catch (e) { return next(e); }
 }
 
-module.exports = { create, list, getById, update, softDelete, approve, reject, share, download, markReviewed };
+// Replace the attached file: archives the previous file into versions[],
+// bumps the version, and re-indexes for semantic search.
+async function replaceFile(req, res, next) {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc || doc.isDeleted) return res.status(404).json({ success: false, message: 'Not found' });
+    const owner = String(doc.uploadedBy) === String(req.user.id);
+    const sameTeamManager = req.user.role === 'manager' && doc.team === req.user.team;
+    if (req.user.role !== 'admin' && !owner && !sameTeamManager) {
+      return res.status(403).json({ success: false, message: 'Only owner, team manager or admin can replace the file' });
+    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'File is required' });
+    if (doc.filePath) {
+      doc.versions.push({
+        version: doc.version,
+        filePath: doc.filePath,
+        fileType: doc.fileType,
+        fileSize: doc.fileSize,
+      });
+      fs.unlink(doc.filePath, () => {});
+    }
+    doc.version += 1;
+    doc.filePath = req.file.path;
+    doc.fileType = req.file.mimetype;
+    doc.fileSize = req.file.size;
+    await doc.save();
+    await indexDocument(doc);
+    await Activity.create({ userId: req.user.id, action: 'update', documentId: doc._id, metadata: { version: doc.version } }).catch(() => {});
+    return res.json({ success: true, data: doc });
+  } catch (e) { return next(e); }
+}
+
+module.exports = { create, list, getById, update, softDelete, approve, reject, share, download, markReviewed, replaceFile };
