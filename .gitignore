@@ -1,6 +1,32 @@
 node_modules/
 dist/
 .env
+.env.local
+.env.*.local
 uploads/
 *.log
 .opencode/
+
+# Reports & Documentation Assets (Kept locally)
+VAULTIC_PROJECT_REPORT.*
+REFERENCE_DOCUMENT_FINAL_REVIEW.pdf
+college_logo.png
+diagrams/
+build_perfect_report.py
+generate_diagrams.py
+generate_screenshots.py
+
+# Office temporary files
+~$*
+
+# Python caches & environments
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+venv/
+.venv/
+
+# OS metadata
+.DS_Store
+Thumbs.db
